@@ -478,11 +478,26 @@ Style is stored in the session manifest and inherited by every eligible headless
 | `--size N` | Cursor size multiplier, 0.5 to 4.0 | 1.0 |
 | `--no-ripple` | No ripple on click | ripple on |
 | `--no-highlight` | No element outline on click | outline on |
+| `--image PATH` | Draw the cursor from a PNG or PDF instead of the arrow; scaled by `--size` | built-in arrow |
+| `--hotspot X,Y` | Click point in the image, in image points from its top-left; requires `--image` | `0,0` |
+| `--pointer-image PATH` | PNG or PDF shown once the cursor arrives on a pressable control, such as a pointing hand | keep the arrow |
+| `--pointer-hotspot X,Y` | Click point in the pointer image; requires `--pointer-image` | `0,0` |
+| `--travel-ms MIN,MAX` | Travel time for short to long moves | `90,320` |
+| `--bow N` | Path curvature multiplier, 0 (straight) to 3 | 1 |
+| `--overshoot N` | Overshoot past the target as a fraction, 0 to 0.15 | 0.035 |
+| `--tremor PX` | Hand tremor amplitude in points, 0 to 4 | 1.1 |
+| `--dwell-ms N` | Pause on the target before the action runs, 0 to 300 | 0 |
+| `--motion-seed N` | Vary each move deterministically from this seed | no variation |
 
 Behaviour:
 
-- Travel is a human path, 90 to 320 ms. The cursor never rotates or resizes.
-- The action waits for cursor arrival confirmation, capped at 900 ms. An unconfirmed arrival reports a warning and the action still proceeds.
+- Travel is a human path, 90 to 320 ms by default, tunable with `--travel-ms`, `--bow`, `--overshoot` and `--tremor`. With `--motion-seed` every move varies its curve side, curvature and pace; the same seed replays the same sequence. The cursor never rotates or resizes.
+- `--dwell-ms` holds the cursor on the target before the action runs. Travel max plus dwell must not exceed 700 ms, so the motion always fits the arrival budget; larger values are rejected with `INVALID_ARGS`.
+- Reduce Motion wins over every motion setting: the cursor jumps to the target with no travel and no dwell.
+- The action waits for cursor arrival confirmation, capped at 900 ms. An unconfirmed arrival reports a warning and the action still proceeds. The first move after the renderer starts may be cut short, and commands whose `--timeout-ms` leaves 1 s or less show no cursor.
+- `--image` takes a PNG or PDF of at most 2 MiB; relative paths are resolved at `enable`. `--fill` and `--rim` do not apply to an image; `--accent` still colours the ripple, outline and trail. PDFs stay sharp at every `--size`. A PNG's point size follows its DPI metadata, so a 72-dpi @2x PNG needs `--size 0.5` (or use a PDF). The image must fit 88 pt left, 152 pt right, 68 pt above and 172 pt below the hotspot at the chosen size; larger images are scaled down to fit. A large image can overlap the label card. The renderer rereads the file when it changes; moving or deleting it falls back to the arrow. SVG is not supported; convert it to PDF. Images are drawn exactly as supplied: unlike the built-in arrow they get no added shadow, so bake one into the file if you want it.
+- With `--pointer-image`, the cursor travels as the arrow (built-in or `--image`) and switches to the pointer image on arrival when the target is a button, link, checkbox, radio button, switch, tab, menu item, disclosure, option or tree item, whatever the action. Any other element switches only when clicked; text fields, combo boxes and date fields keep the arrow. A coordinate `mouse-click` arrives as the pointer, `mouse-move` and `hover` as the arrow. The next travel departs as the arrow again.
+- Motion and image settings are presentation only; physical `--headed` drags keep their own motion. After upgrading agent-desktop, run `cursor-overlay disable` then `enable` so the renderer understands the new settings.
 - A click plays a ripple, then flashes an accent outline around the element for 0.9 s. Both draw below the cursor.
 - The card shows the label. With no label there is no card.
 - Drags show a live accent-colored path while held and fade after release, controlled by the ripple setting and suppressed under Reduce Motion.

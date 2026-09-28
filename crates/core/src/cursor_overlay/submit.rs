@@ -19,23 +19,22 @@ pub(crate) fn travel_scope(
     ))))
 }
 
+/// Moves the drawn cursor to `destination` before an action; `pointer` arrives showing the
+/// pointer image because the action lands on a pressable control.
 pub(crate) fn submit_travel(
     adapter: &dyn PlatformAdapter,
     context: &CommandContext,
     destination: Point,
     lease: &crate::InteractionLease,
+    pointer: bool,
 ) {
     let Some(_scope) = travel_scope(lease) else {
         return;
     };
-    submit(
-        adapter,
-        context,
-        destination,
-        None,
-        false,
-        CursorPhase::Travel,
-    );
+    let instruction =
+        super::CursorOverlayInstruction::new(destination, context.cursor_overlay(), false)
+            .map(|instruction| instruction.with_pointer(pointer));
+    let _ = send(adapter, context, instruction);
 }
 
 pub(crate) fn input_was_delivered(result: &Result<(), AdapterError>) -> bool {
@@ -139,6 +138,7 @@ fn send(
         instruction,
         context.cursor_overlay().style().clone(),
     )
+    .with_motion(context.cursor_overlay().motion().clone())
     .with_agent_id(agent_route(context));
     update(adapter, &control)
 }
@@ -175,7 +175,7 @@ pub(crate) fn dispatch_mouse_event_with_cursor(
     lease: &crate::InteractionLease,
 ) -> Result<(), AdapterError> {
     let point = event.point.clone();
-    crate::cursor_overlay::submit_travel(adapter, context, point.clone(), lease);
+    crate::cursor_overlay::submit_travel(adapter, context, point.clone(), lease, click);
     let result = adapter.mouse_event(event, lease);
     if crate::cursor_overlay::input_was_delivered(&result) {
         crate::cursor_overlay::submit(

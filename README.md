@@ -221,16 +221,27 @@ The style command is optional and saves settings for the next presentation witho
 | `--size N` | Size multiplier, 0.5–4.0 | 1.0 |
 | `--no-ripple` | No ripple on click | ripple on |
 | `--no-highlight` | No element outline on click | outline on |
+| `--image PATH` | PNG or PDF drawn instead of the arrow, scaled by `--size` | arrow |
+| `--hotspot X,Y` | Click point in the image, points from its top-left | `0,0` |
+| `--pointer-image PATH` | Image shown on arrival over buttons, links and other pressable controls | arrow |
+| `--pointer-hotspot X,Y` | Click point in the pointer image | `0,0` |
+| `--travel-ms MIN,MAX` | Travel time, short to long moves | `90,320` |
+| `--bow N` | Path curvature, 0 (straight) to 3 | 1 |
+| `--overshoot N` | Overshoot fraction, 0–0.15 | 0.035 |
+| `--tremor PX` | Hand tremor, 0–4 points | 1.1 |
+| `--dwell-ms N` | Pause on the target before acting, 0–300 | 0 |
+| `--motion-seed N` | Vary each move deterministically | off |
 
 **Behaviour**
 
-- The cursor travels a human path in 90–320 ms. It never rotates or resizes.
+- The cursor travels a human path in 90–320 ms by default. The motion flags tune it; travel max plus dwell is capped at 700 ms. Reduce Motion skips travel and dwell. It never rotates or resizes.
+- `--image` swaps the arrow for your PNG or PDF (≤ 2 MiB). Fill and rim do not apply; accent still drives the ripple, outline and trail. Oversized images are scaled down to fit the cursor stage, and a missing file falls back to the arrow. `--pointer-image` adds a second image, such as a pointing hand, shown when the cursor lands on a pressable control.
 - The action waits up to 900 ms for cursor arrival confirmation. If the renderer does not confirm in time, a warning is reported and the action proceeds.
 - A click plays a ripple, then flashes an accent outline around the element for 0.9 s. Both draw below the cursor.
 - Idle for 6 s, it fades out. The next command brings it back.
 - `cursor-overlay disable` removes it now. You do not have to end the session.
 - Headed actions retain it. It never moves or intercepts the OS pointer.
-- Overhead is about 150–300 ms per action, all of it the visible travel.
+- Overhead is about 150–300 ms per action with the default motion, all of it the visible travel; tuned motion can raise it to 700 ms.
 
 macOS renders it natively. Windows and Linux inherit the adapter's no-op and need only their own renderer against the same core contract.
 
@@ -398,7 +409,7 @@ agent-desktop session start [--name LABEL] [--no-trace] [--cursor [--multi-agent
 agent-desktop session end [id]
 agent-desktop session list
 agent-desktop session gc [--older-than SECS] [--ended]
-agent-desktop --session <id> [--agent-id ID] cursor-overlay enable [--multi-agent] [--label TEXT] [--max-words N] [--fill HEX] [--rim HEX] [--accent HEX] [--size N] [--no-ripple] [--no-highlight]
+agent-desktop --session <id> [--agent-id ID] cursor-overlay enable [--multi-agent] [--label TEXT] [--max-words N] [--fill HEX] [--rim HEX] [--accent HEX] [--size N] [--no-ripple] [--no-highlight] [--image PATH [--hotspot X,Y]] [--pointer-image PATH [--pointer-hotspot X,Y]] [--travel-ms MIN,MAX] [--bow N] [--overshoot N] [--tremor PX] [--dwell-ms N] [--motion-seed N]
 export AGENT_DESKTOP_SESSION=<id>
 agent-desktop cursor-overlay disable
 agent-desktop status                     # platform, permissions, session_id, tracing, latest snapshot
