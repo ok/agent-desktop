@@ -152,6 +152,7 @@ EXAMPLES
   agent-desktop --session <session_id> --agent-id researcher cursor-overlay enable --label "Checking details"
   agent-desktop --session <session_id> --agent-id researcher click @s8f3k2p9:e5
   agent-desktop --session <session_id> cursor-overlay enable --label "Opening menu" --accent "#4299FF"
+  agent-desktop --session <session_id> cursor-overlay enable --travel-ms 300,500 --dwell-ms 120 --motion-seed 7
   agent-desktop --session <session_id> click @s8f3k2p9:e5
   agent-desktop batch '[{"command":"click","args":{"ref_id":"@e1","snapshot":"<snapshot_id>"}}]'
   agent-desktop --session run-b batch '[{"command":"status","session":"run-b","args":{}}]'
