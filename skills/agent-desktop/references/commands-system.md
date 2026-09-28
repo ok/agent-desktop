@@ -487,7 +487,7 @@ Style is stored in the session manifest and inherited by every eligible headless
 
 Behaviour:
 
-- Travel is a human path, 90 to 320 ms by default, tunable with `--travel-ms`, `--bow`, `--overshoot` and `--tremor`. With `--motion-seed` every move varies its curve side, curvature and pace; the same seed replays the same sequence. The cursor never rotates or resizes.
+- Travel is a human path, 90 to 320 ms by default, tunable with `--travel-ms`, `--bow`, `--overshoot` and `--tremor`. With `--motion-seed` every move varies its curve side, curvature and pace; the same seed replays the same sequence from each `enable`. The cursor never rotates or resizes.
 - `--dwell-ms` holds the cursor on the target before the action runs. Travel max plus dwell must not exceed 700 ms, so the motion always fits the arrival budget; larger values are rejected with `INVALID_ARGS`.
 - Reduce Motion wins over every motion setting: the cursor jumps to the target with no travel and no dwell.
 - The action waits for cursor arrival confirmation, capped at 900 ms. An unconfirmed arrival reports a warning and the action still proceeds. The first move after the renderer starts may be cut short, and commands whose `--timeout-ms` leaves 1 s or less show no cursor.
