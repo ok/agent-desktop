@@ -478,6 +478,10 @@ Style is stored in the session manifest and inherited by every eligible headless
 | `--size N` | Cursor size multiplier, 0.5 to 4.0 | 1.0 |
 | `--no-ripple` | No ripple on click | ripple on |
 | `--no-highlight` | No element outline on click | outline on |
+| `--image PATH` | Draw the cursor from a PNG or PDF instead of the arrow; scaled by `--size` | built-in arrow |
+| `--hotspot X,Y` | Click point in the image, in image points from its top-left; requires `--image` | `0,0` |
+| `--pointer-image PATH` | PNG or PDF shown once the cursor arrives on a pressable control, such as a pointing hand | keep the arrow |
+| `--pointer-hotspot X,Y` | Click point in the pointer image; requires `--pointer-image` | `0,0` |
 
 Behaviour:
 
@@ -489,6 +493,9 @@ Behaviour:
 - Idle for 6 s it fades out; the next command restores it.
 - `disable` removes it and stops the renderer. Ending the session is not needed.
 - Headed actions retain it while the real pointer is in use.
+- `--image` takes a PNG or PDF of at most 2 MiB; relative paths are resolved at `enable`. `--fill` and `--rim` do not apply to an image; `--accent` still colours the ripple, outline and trail. PDFs stay sharp at every `--size`. A PNG's point size follows its DPI metadata, so a 72-dpi @2x PNG needs `--size 0.5` (or use a PDF). The image must fit 88 pt left, 152 pt right, 68 pt above and 172 pt below the hotspot at the chosen size; larger images are scaled down to fit. A large image can overlap the label card. The renderer rereads the file when it changes; moving or deleting it falls back to the arrow. SVG is not supported; convert it to PDF. Images are drawn exactly as supplied: unlike the built-in arrow they get no added shadow, so bake one into the file if you want it.
+- With `--pointer-image`, the cursor travels as the arrow (built-in or `--image`) and switches to the pointer image on arrival when the target is a button, link, checkbox, radio button, switch, tab, menu item, disclosure, option or tree item, whatever the action. Any other element switches only when clicked; text fields, combo boxes and date fields keep the arrow. A coordinate `mouse-click` arrives as the pointer, `mouse-move` and `hover` as the arrow. The next travel departs as the arrow again.
+- Image settings are presentation only. After upgrading agent-desktop, run `cursor-overlay disable` then `enable` so the renderer understands the new settings.
 - macOS renders it natively; other platforms use the adapter's presentation no-op.
 
 ### Shared-session subagent cursors (macOS)

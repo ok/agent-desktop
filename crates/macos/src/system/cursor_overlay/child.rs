@@ -132,9 +132,8 @@ fn handle(control: &CursorOverlayControl, state: &mut OverlayState) -> Result<bo
     if control.is_disable() {
         return Ok(false);
     }
-    if let Some(style) = control.style() {
-        state.style = style.clone();
-        bridge::apply_style(&state.style);
+    if let Some(image_changed) = absorb_style(control, state) {
+        bridge::apply_style(&state.style, image_changed);
     }
     if control.is_hide() {
         bridge::hide();
@@ -157,6 +156,15 @@ fn handle(control: &CursorOverlayControl, state: &mut OverlayState) -> Result<bo
     render(instruction, state)?;
     apply_landing_memory(control, state, Some(instruction));
     Ok(true)
+}
+
+/// Copies the control's style into the renderer state and reports whether the cursor images
+/// changed, or `None` when no style arrived.
+fn absorb_style(control: &CursorOverlayControl, state: &mut OverlayState) -> Option<bool> {
+    let style = control.style()?;
+    let image_changed = state.style.images() != style.images();
+    state.style = style.clone();
+    Some(image_changed)
 }
 
 fn apply_landing_memory(
@@ -329,3 +337,7 @@ fn cleanup(path: PathBuf) -> Result<(), AdapterError> {
 #[cfg(test)]
 #[path = "child_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "child_image_tests.rs"]
+mod image_tests;

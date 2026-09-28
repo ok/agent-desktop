@@ -139,3 +139,40 @@ fn multi_agent_session_cancel_drag_routes_to_the_per_agent_socket() {
     assert!(cancel.is_hide());
     assert_eq!(cancel.agent_id(), Some("agent-a"));
 }
+
+#[test]
+fn a_coordinate_click_arrives_as_the_pointer_and_a_move_as_the_arrow() {
+    for (click, pointer) in [(true, true), (false, false)] {
+        let adapter = RoutingCaptureAdapter::new();
+        dispatch_mouse_event_with_cursor(
+            &adapter,
+            &context(false, "agent-a"),
+            click_event(),
+            click,
+            &lease(),
+        )
+        .expect("dispatch succeeds");
+        let presented = adapter.presented.lock().unwrap();
+        let travel = presented[0].instruction().expect("travel instruction");
+        assert_eq!(travel.phase(), CursorPhase::Travel);
+        assert_eq!(travel.is_pointer(), pointer, "click {click}");
+        assert!(
+            presented[1..]
+                .iter()
+                .all(|control| !control.instruction().is_some_and(|i| i.is_pointer())),
+            "only the travel decides the image"
+        );
+    }
+}
+
+#[test]
+fn the_pointer_flag_is_omitted_from_json_unless_set() {
+    let config = CursorOverlayConfig::enabled(None, 6).expect("valid config");
+    let arrow = CursorOverlayInstruction::new(Point { x: 1.0, y: 2.0 }, &config, false).unwrap();
+    assert!(!serde_json::to_string(&arrow).unwrap().contains("pointer"));
+    let pointer = arrow.with_pointer(true);
+    let json = serde_json::to_string(&pointer).unwrap();
+    assert!(json.contains(r#""pointer":true"#));
+    let parsed: CursorOverlayInstruction = serde_json::from_str(&json).unwrap();
+    assert!(parsed.is_pointer());
+}
