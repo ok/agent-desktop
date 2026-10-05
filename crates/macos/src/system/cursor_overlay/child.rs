@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use super::bridge;
+use super::settle::ShapeSettle;
 
 pub(super) const MARKER: &str = "AGENT_DESKTOP_CURSOR_OVERLAY_CHILD";
 pub(super) const SOCKET_ENV: &str = "AGENT_DESKTOP_CURSOR_OVERLAY_SOCKET";
@@ -22,6 +23,7 @@ struct OverlayState {
     moves: u64,
     at: Option<Point>,
     resting: bool,
+    settle: ShapeSettle,
 }
 
 pub(crate) fn entry_from_env() -> Option<Result<(), AdapterError>> {
@@ -105,6 +107,7 @@ fn run() -> Result<(), AdapterError> {
             }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                 bridge::idle();
+                state.settle.check(state.at.as_ref());
                 if !state.resting
                     && !bridge::drag_active()
                     && quiet_since.elapsed().as_millis() >= u128::from(CURSOR_IDLE_REST_MS)
@@ -175,6 +178,7 @@ fn handle(control: &CursorOverlayControl, state: &mut OverlayState) -> Result<bo
     render(instruction, state)?;
     apply_landing_memory(control, state, Some(instruction));
     advance_moves(control, state);
+    state.settle.restart(instruction, &state.style);
     Ok(true)
 }
 

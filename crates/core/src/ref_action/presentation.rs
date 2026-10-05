@@ -25,14 +25,8 @@ pub(super) fn before_dispatch(
         return;
     }
     TRAVELLED_BEFORE_LEASE.set(None);
-    let pointer = shows_pointer(&target.entry.identity.role, action);
-    crate::cursor_overlay::submit_travel(
-        target.adapter,
-        target.context,
-        destination,
-        lease,
-        pointer,
-    );
+    let shape = arrival_shape(&target.entry.identity.role, action);
+    crate::cursor_overlay::submit_travel(target.adapter, target.context, destination, lease, shape);
 }
 
 /// Starts the drawn cursor's travel toward the target before the interaction
@@ -56,13 +50,13 @@ pub(super) fn before_lease(
     let Some(destination) = target_center(context, deadline) else {
         return;
     };
-    let pointer = shows_pointer(&context.entry.identity.role, &request.action);
+    let shape = arrival_shape(&context.entry.identity.role, &request.action);
     if crate::cursor_overlay::submit_travel_before_lease(
         context.adapter,
         context.context,
         destination.clone(),
         deadline,
-        pointer,
+        shape,
     ) {
         TRAVELLED_BEFORE_LEASE.set(Some((destination.x, destination.y)));
     }
@@ -134,11 +128,13 @@ fn center_of(bounds: &crate::Rect) -> Option<crate::Point> {
     })
 }
 
-/// A pressable control shows the pointer however it is reached; any other element shows it
-/// only when clicked, and text entry never does.
-pub(super) fn shows_pointer(role: &str, action: &Action) -> bool {
-    let role = crate::Role::from_token(role);
-    role.is_pressable() || (is_click(action) && !role.takes_text())
+/// A pressable control shows the pointer and a text control the text caret however either is
+/// reached; any other element shows the pointer only when clicked.
+pub(super) fn arrival_shape(role: &str, action: &Action) -> crate::CursorShape {
+    match crate::CursorShape::over(crate::Role::from_token(role)) {
+        crate::CursorShape::Arrow if is_click(action) => crate::CursorShape::Pointer,
+        shape => shape,
+    }
 }
 
 pub(super) fn after_dispatch(

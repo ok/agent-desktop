@@ -3,6 +3,7 @@ pub(crate) mod app_menu;
 pub(crate) mod ax_element;
 pub(crate) mod build_context;
 pub(crate) mod child_labels;
+pub(crate) mod cursor_shape;
 pub(crate) mod element_bounds;
 pub(crate) mod element_dedupe;
 pub(crate) mod element_name;

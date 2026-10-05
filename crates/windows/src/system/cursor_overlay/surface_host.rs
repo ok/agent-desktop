@@ -91,7 +91,8 @@ impl SurfaceHost {
             }
             CursorOverlayControl::Present { instruction, .. } => match instruction.phase() {
                 CursorPhase::Travel => {
-                    self.presentation.depart(instruction.is_pointer());
+                    self.presentation
+                        .depart(instruction.shape() == agent_desktop_core::CursorShape::Pointer);
                     self.travel(
                         instruction.destination().clone(),
                         instruction.target().cloned(),

@@ -137,32 +137,36 @@ int main(void) {
         ADPointerImageApply(window, pointer);
         require(!pointer.hidden && ADImageLayer.superlayer == nil,
                 "a pointer image alone must leave the arrow until arrival");
-        ADPointerImageSelect(window, pointer, true);
+        ADPointerImageSelect(window, pointer, 1);
         require(pointer.hidden && near(ADImageLayer.bounds.size.width, 26.0) &&
                     near(ADImageLayer.anchorPoint.x, 8.0 / 26.0),
                 "arrival on a control must show the pointer image at its hotspot");
         agent_desktop_cursor_overlay_image(0, small.fileSystemRepresentation, 4.0, 2.0);
-        ADPointerImageSelect(window, pointer, false);
+        ADPointerImageSelect(window, pointer, 0);
         require(pointer.hidden && near(ADImageLayer.bounds.size.width, 20.0),
                 "departure must switch back to the arrow image");
-        ADPointerImageSelect(window, pointer, true);
-        ADPointerImageRelease(window, pointer, 0.05);
-        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.2]];
-        require(near(ADImageLayer.bounds.size.width, 20.0),
-                "after an action's effect the pointer must return to the arrow");
-        ADPointerImageSelect(window, pointer, true);
-        ADPointerImageRelease(window, pointer, 0.05);
-        ADPointerImageSelect(window, pointer, false);
-        ADPointerImageSelect(window, pointer, true);
-        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.2]];
+        NSString *caret = writePNG(@"ad-cursor-caret", 12, 22);
+        agent_desktop_cursor_overlay_image(2, caret.fileSystemRepresentation, 6.0, 11.0);
+        ADPointerImageSelect(window, pointer, 2);
+        require(pointer.hidden && near(ADImageLayer.bounds.size.width, 12.0) &&
+                    near(ADImageLayer.anchorPoint.y, 0.5),
+                "a text control must show the text image at its hotspot");
+        ADPointerImageSelect(window, pointer, 1);
         require(near(ADImageLayer.bounds.size.width, 26.0),
-                "a release scheduled before a newer arrival must not hide that arrival's pointer");
-        ADPointerImageSelect(window, pointer, false);
+                "a pressable control must switch from the text image to the pointer");
+        agent_desktop_cursor_overlay_image(2, NULL, 0.0, 0.0);
+        ADPointerImageSelect(window, pointer, 2);
+        require(near(ADImageLayer.bounds.size.width, 20.0),
+                "a text shape without an image must draw the arrow image");
+        ADPointerImageSelect(window, pointer, 7);
+        require(near(ADImageLayer.bounds.size.width, 20.0), "an unknown slot must draw the arrow");
+        [[NSFileManager defaultManager] removeItemAtPath:caret error:nil];
+        ADPointerImageSelect(window, pointer, 0);
         agent_desktop_cursor_overlay_image(0, NULL, 0.0, 0.0);
         ADPointerImageApply(window, pointer);
         require(!pointer.hidden && ADImageLayer.superlayer == nil,
                 "departure without an arrow image must show the built-in arrow");
-        ADPointerImageSelect(window, pointer, true);
+        ADPointerImageSelect(window, pointer, 1);
         [[NSFileManager defaultManager] removeItemAtPath:hand error:nil];
         ADPointerImageApply(window, pointer);
         require(!pointer.hidden, "a deleted pointer image must fall back to the arrow");
@@ -184,7 +188,7 @@ int main(void) {
         require([[NSData dataWithBytes:header length:sizeof(header)] writeToFile:bomb atomically:YES],
                 "oversized fixture must be written");
         agent_desktop_cursor_overlay_image(0, bomb.fileSystemRepresentation, 0.0, 0.0);
-        ADPointerImageSelect(window, pointer, false);
+        ADPointerImageSelect(window, pointer, 0);
         ADPointerImageApply(window, pointer);
         require(!pointer.hidden && ADImageLayer.superlayer == nil,
                 "a PNG declaring 1025 pixels wide must fall back to the arrow");

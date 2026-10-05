@@ -5,7 +5,7 @@ use std::io::Read;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
-pub const MAX_CURSOR_IMAGE_PATH_BYTES: usize = 1024;
+pub const MAX_CURSOR_IMAGE_PATH_BYTES: usize = 768;
 pub const MAX_CURSOR_IMAGE_BYTES: u64 = 2 * 1024 * 1024;
 /// Largest PNG pixel width or height the renderer will decode.
 pub const MAX_CURSOR_IMAGE_PIXELS: u32 = 1024;

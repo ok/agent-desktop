@@ -1,4 +1,4 @@
-use super::{CursorOverlayConfig, CursorPhase};
+use super::{CursorOverlayConfig, CursorPhase, CursorShape};
 use crate::{AdapterError, ErrorCode, Point, Rect};
 use serde::{Deserialize, Serialize};
 
@@ -15,8 +15,8 @@ pub struct CursorOverlayInstruction {
     target: Option<Rect>,
     #[serde(default)]
     phase: CursorPhase,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pointer: bool,
+    #[serde(default, skip_serializing_if = "CursorShape::is_arrow")]
+    shape: CursorShape,
 }
 
 impl CursorOverlayInstruction {
@@ -39,7 +39,7 @@ impl CursorOverlayInstruction {
             click,
             target: None,
             phase: CursorPhase::Travel,
-            pointer: false,
+            shape: CursorShape::Arrow,
         })
     }
 
@@ -48,14 +48,14 @@ impl CursorOverlayInstruction {
         self
     }
 
-    /// Arrive showing the pointer image: the travel ends on a pressable control.
-    pub const fn with_pointer(mut self, pointer: bool) -> Self {
-        self.pointer = pointer;
+    /// The image the travel arrives showing, from the element it ends on.
+    pub const fn with_shape(mut self, shape: CursorShape) -> Self {
+        self.shape = shape;
         self
     }
 
-    pub const fn is_pointer(&self) -> bool {
-        self.pointer
+    pub const fn shape(&self) -> CursorShape {
+        self.shape
     }
 
     pub fn with_drag_from(mut self, drag_from: Option<Point>) -> Self {
