@@ -1,7 +1,7 @@
 use agent_desktop_core::{
-    AdapterError, CURSOR_IDLE_REST_MS, CursorMotion, CursorMotionProfile, CursorOverlayConfig,
-    CursorOverlayControl, CursorOverlayInstruction, CursorOverlayStyle, CursorPhase, CursorPose,
-    ErrorCode, Point, place_label,
+    AdapterError, CURSOR_IDLE_REST_MS, CursorMotionProfile, CursorOverlayConfig,
+    CursorOverlayControl, CursorOverlayInstruction, CursorOverlayStyle, CursorPhase, ErrorCode,
+    Point,
 };
 use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
@@ -12,6 +12,12 @@ use std::time::Duration;
 
 use super::bridge;
 use super::settle::{self, ShapeSettle};
+use render::render;
+
+#[path = "child_aim.rs"]
+mod aim;
+#[path = "child_render.rs"]
+mod render;
 
 pub(super) const MARKER: &str = "AGENT_DESKTOP_CURSOR_OVERLAY_CHILD";
 pub(super) const SOCKET_ENV: &str = "AGENT_DESKTOP_CURSOR_OVERLAY_SOCKET";
@@ -26,6 +32,7 @@ struct OverlayState {
     at: Option<Point>,
     resting: bool,
     settle: ShapeSettle,
+    drift: Option<aim::Drift>,
 }
 
 pub(crate) fn entry_from_env() -> Option<Result<(), AdapterError>> {
@@ -106,6 +113,7 @@ fn run() -> Result<(), AdapterError> {
             }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                 bridge::idle();
+                let _ = aim::drift_when_due(&mut state);
                 settle_shape(&mut state);
                 if !state.resting
                     && !bridge::drag_active()
@@ -142,6 +150,7 @@ fn handle(control: &CursorOverlayControl, state: &mut OverlayState) -> Result<bo
     if let Some(image_changed) = absorb_settings(control, state) {
         bridge::apply_style(&state.style, image_changed);
     }
+    state.drift = None;
     if control.is_hide() {
         bridge::hide();
         state.settle.cancel();
@@ -161,9 +170,11 @@ fn handle(control: &CursorOverlayControl, state: &mut OverlayState) -> Result<bo
         owned = CursorOverlayInstruction::new(bridge::initial_point()?, &config, false)?;
         &owned
     };
-    render(instruction, state)?;
-    apply_landing_memory(control, state, Some(instruction));
+    let aimed = aim::aimed(instruction, state);
+    render(&aimed, state)?;
+    apply_landing_memory(control, state, Some(&aimed));
     advance_moves(control, state);
+    aim::plan_drift(&aimed, state);
     if instruction.phase() == CursorPhase::Drag || !settle::has_shapes(&state.style) {
         state.settle.cancel();
     } else {
@@ -230,86 +241,6 @@ fn apply_landing_memory(
     } else {
         instruction.destination().clone()
     });
-}
-
-fn render(
-    instruction: &CursorOverlayInstruction,
-    state: &OverlayState,
-) -> Result<(), AdapterError> {
-    if instruction.phase() == CursorPhase::Drag {
-        let from = instruction.drag_from().unwrap_or(instruction.destination());
-        let (screen, fps, reduce_motion) = bridge::screen_at(from)?;
-        let bubble = place_label(from, BUBBLE_SIZE, &screen);
-        bridge::run(
-            &[CursorPose::still(from.clone())],
-            fps,
-            instruction,
-            reduce_motion,
-            &bubble,
-        )?;
-        bridge::begin_drag(from, state.style.ripple() && !reduce_motion);
-        return Ok(());
-    }
-    if instruction.phase() == CursorPhase::Effect {
-        bridge::end_drag(instruction.destination(), instruction.drag_from().is_some());
-    }
-    let (screen, fps, reduce_motion) = bridge::screen_at(instruction.destination())?;
-    let bubble = place_label(instruction.destination(), BUBBLE_SIZE, &screen);
-    let shown = if state.style.highlight() {
-        instruction.clone()
-    } else {
-        instruction.clone().with_target(None)
-    };
-    let frames = frames_for(state, &shown, &screen, fps, reduce_motion);
-    bridge::run(&frames, fps, &shown, reduce_motion, &bubble)
-}
-
-fn frames_for(
-    state: &OverlayState,
-    instruction: &CursorOverlayInstruction,
-    screen: &agent_desktop_core::Rect,
-    fps: u32,
-    reduce_motion: bool,
-) -> Vec<CursorPose> {
-    if reduce_motion {
-        vec![CursorPose::still(instruction.destination().clone())]
-    } else {
-        motion_frames(state, instruction, screen, fps)
-    }
-}
-
-fn motion_frames(
-    state: &OverlayState,
-    instruction: &CursorOverlayInstruction,
-    screen: &agent_desktop_core::Rect,
-    fps: u32,
-) -> Vec<CursorPose> {
-    let destination = instruction.destination();
-    if instruction.phase() == CursorPhase::Effect {
-        let mut frames = vec![CursorPose::still(destination.clone())];
-        if instruction.is_click() && state.style.ripple() {
-            frames.push(CursorPose {
-                point: destination.clone(),
-                ripple: 1.0,
-            });
-        }
-        return frames;
-    }
-    let start = state.at.clone().unwrap_or_else(|| Point {
-        x: (destination.x - 180.0).clamp(screen.x, screen.x + screen.width),
-        y: (destination.y + 108.0).clamp(screen.y, screen.y + screen.height),
-    });
-    let motion = CursorMotion::shaped(start, destination.clone(), &state.motion, state.moves)
-        .with_impact(instruction.is_click())
-        .with_ripple(state.style.ripple());
-    let frame_ms = 1_000.0 / f64::from(fps);
-    let frame_count = (motion.total_ms() as f64 / frame_ms).ceil() as u64;
-    (0..=frame_count)
-        .map(|frame| {
-            let elapsed = ((frame as f64 * frame_ms).round() as u64).min(motion.total_ms());
-            motion.pose(elapsed)
-        })
-        .collect()
 }
 
 fn read_control(reader: impl Read) -> Result<CursorOverlayControl, AdapterError> {

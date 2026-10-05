@@ -1,4 +1,6 @@
+use super::render::motion_frames;
 use super::*;
+use agent_desktop_core::CursorPose;
 
 #[test]
 fn accepted_stream_waits_for_a_delayed_control() {

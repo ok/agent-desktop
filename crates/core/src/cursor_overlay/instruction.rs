@@ -58,6 +58,12 @@ impl CursorOverlayInstruction {
         self.shape
     }
 
+    /// Lands on `destination` instead, e.g. a point the renderer chose inside the target.
+    pub fn with_destination(mut self, destination: Point) -> Self {
+        self.destination = destination;
+        self
+    }
+
     pub fn with_drag_from(mut self, drag_from: Option<Point>) -> Self {
         self.drag_from = drag_from;
         self

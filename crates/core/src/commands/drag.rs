@@ -136,7 +136,7 @@ pub fn execute(
         context,
         from.point.clone(),
         &lease,
-        crate::CursorShape::Arrow,
+        crate::cursor_overlay::Arrival::at_point(crate::CursorShape::Arrow),
     );
     let drag_tracking = crate::cursor_overlay::submit_drag(
         adapter,

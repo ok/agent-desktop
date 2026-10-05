@@ -11,8 +11,17 @@ pub(super) fn before_dispatch(
     let Some(destination) = destination(preflight) else {
         return;
     };
-    let shape = arrival_shape(&target.entry.identity.role, action);
-    crate::cursor_overlay::submit_travel(target.adapter, target.context, destination, lease, shape);
+    let arrival = crate::cursor_overlay::Arrival {
+        shape: arrival_shape(&target.entry.identity.role, action),
+        bounds: aim_bounds(preflight),
+    };
+    crate::cursor_overlay::submit_travel(
+        target.adapter,
+        target.context,
+        destination,
+        lease,
+        arrival,
+    );
 }
 
 /// A pressable control shows the pointer and a text control the text caret however either is
@@ -49,6 +58,15 @@ pub(super) fn after_dispatch(
         is_click(action),
         CursorPhase::Effect,
     );
+}
+
+/// The control's bounds, inside which the renderer may vary the landing point. Physical
+/// delivery clicks its verified point, so the drawn cursor must land exactly there.
+fn aim_bounds(preflight: &ActionabilityPreflight) -> Option<crate::Rect> {
+    match preflight.pointer_delivery {
+        crate::actionability::PointerDelivery::Physical => None,
+        _ => preflight.presentation_bounds,
+    }
 }
 
 fn destination(preflight: &ActionabilityPreflight) -> Option<crate::Point> {

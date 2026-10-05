@@ -19,15 +19,31 @@ pub(crate) fn travel_scope(
     ))))
 }
 
-/// Moves the drawn cursor to `destination` before an action, arriving as `shape`. A shape is
-/// sent only when an image is configured for it, so controls without one stay byte-identical
-/// to what earlier renderers accept.
+/// How a travel arrives: the cursor `shape`, and the `bounds` of the control it lands on when
+/// the renderer may choose its own landing point inside them.
+pub(crate) struct Arrival {
+    pub(crate) shape: super::CursorShape,
+    pub(crate) bounds: Option<Rect>,
+}
+
+impl Arrival {
+    pub(crate) const fn at_point(shape: super::CursorShape) -> Self {
+        Self {
+            shape,
+            bounds: None,
+        }
+    }
+}
+
+/// Moves the drawn cursor to `destination` before an action. A shape is sent only when an
+/// image is configured for it, and bounds only when aiming is configured, so controls without
+/// either stay byte-identical to what earlier renderers accept.
 pub(crate) fn submit_travel(
     adapter: &dyn PlatformAdapter,
     context: &CommandContext,
     destination: Point,
     lease: &crate::InteractionLease,
-    shape: super::CursorShape,
+    arrival: Arrival,
 ) {
     let Some(_scope) = travel_scope(lease) else {
         return;
@@ -35,8 +51,10 @@ pub(crate) fn submit_travel(
     let instruction =
         super::CursorOverlayInstruction::new(destination, context.cursor_overlay(), false).map(
             |instruction| {
-                if context.cursor_overlay().style().draws(shape) {
-                    instruction.with_shape(shape)
+                let aims = !context.cursor_overlay().motion().aim().is_default();
+                let instruction = instruction.with_target(arrival.bounds.filter(|_| aims));
+                if context.cursor_overlay().style().draws(arrival.shape) {
+                    instruction.with_shape(arrival.shape)
                 } else {
                     instruction
                 }
@@ -188,7 +206,13 @@ pub(crate) fn dispatch_mouse_event_with_cursor(
     } else {
         crate::CursorShape::Arrow
     };
-    crate::cursor_overlay::submit_travel(adapter, context, point.clone(), lease, shape);
+    crate::cursor_overlay::submit_travel(
+        adapter,
+        context,
+        point.clone(),
+        lease,
+        crate::cursor_overlay::Arrival::at_point(shape),
+    );
     let result = adapter.mouse_event(event, lease);
     if crate::cursor_overlay::input_was_delivered(&result) {
         crate::cursor_overlay::submit(

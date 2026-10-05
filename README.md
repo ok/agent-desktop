@@ -284,7 +284,7 @@ The style command is optional and saves settings for the next presentation witho
 | `--text-image PATH` | Image shown over text fields and other controls that take typed text | arrow |
 | `--text-hotspot X,Y` | Click point in the text image | `0,0` |
 
-`cursor-overlay enable` also accepts `--travel-ms`, `--bow`, `--overshoot`, `--tremor`, `--dwell-ms` and `--motion-seed` for session or per-agent motion profiles; see the [system command reference](skills/agent-desktop/references/commands-system.md#cursor-overlay).
+`cursor-overlay enable` also accepts `--travel-ms`, `--bow`, `--overshoot`, `--tremor`, `--dwell-ms`, `--motion-seed`, `--aim-spread` and `--drift-off` for session or per-agent motion profiles; see the [system command reference](skills/agent-desktop/references/commands-system.md#cursor-overlay).
 
 **Behaviour**
 
@@ -473,7 +473,7 @@ agent-desktop session start [--name LABEL] [--no-trace] [--cursor [--multi-agent
 agent-desktop session end [id]
 agent-desktop session list
 agent-desktop session gc [--older-than SECS] [--ended]
-agent-desktop --session <id> [--agent-id ID] cursor-overlay enable [--multi-agent] [--label TEXT] [--max-words N] [--fill HEX] [--rim HEX] [--accent HEX] [--size N] [--no-ripple] [--no-highlight] [--image PATH [--hotspot X,Y]] [--pointer-image PATH [--pointer-hotspot X,Y]] [--text-image PATH [--text-hotspot X,Y]]
+agent-desktop --session <id> [--agent-id ID] cursor-overlay enable [--multi-agent] [--label TEXT] [--max-words N] [--fill HEX] [--rim HEX] [--accent HEX] [--size N] [--no-ripple] [--no-highlight] [--image PATH [--hotspot X,Y]] [--pointer-image PATH [--pointer-hotspot X,Y]] [--text-image PATH [--text-hotspot X,Y]] [--aim-spread N] [--drift-off]
 export AGENT_DESKTOP_SESSION=<id>
 agent-desktop cursor-overlay disable
 agent-desktop status                     # platform, permissions, session_id, tracing, latest snapshot

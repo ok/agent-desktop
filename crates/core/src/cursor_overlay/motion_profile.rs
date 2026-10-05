@@ -1,3 +1,4 @@
+use super::CursorAim;
 use super::timing::CURSOR_MOTION_BUDGET_MS;
 use crate::{AdapterError, ErrorCode};
 use serde::{Deserialize, Serialize};
@@ -41,6 +42,8 @@ pub struct CursorMotionProfile {
     dwell_ms: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     seed: Option<u64>,
+    #[serde(default, skip_serializing_if = "CursorAim::is_default")]
+    aim: CursorAim,
 }
 
 impl CursorMotionProfile {
@@ -67,6 +70,7 @@ impl CursorMotionProfile {
                 "Cursor --dwell-ms must be between 0 and {MAX_DWELL_MS}"
             )));
         }
+        self.aim.validate()?;
         if self.travel_max_ms.saturating_add(self.dwell_ms) > CURSOR_MOTION_BUDGET_MS {
             return Err(invalid(format!(
                 "Cursor travel max plus dwell must not exceed {CURSOR_MOTION_BUDGET_MS} ms"
@@ -100,6 +104,10 @@ impl CursorMotionProfile {
         self.seed = seed;
     }
 
+    pub fn set_aim(&mut self, aim: CursorAim) {
+        self.aim = aim;
+    }
+
     pub const fn travel_ms(&self) -> (u64, u64) {
         (self.travel_min_ms, self.travel_max_ms)
     }
@@ -123,6 +131,10 @@ impl CursorMotionProfile {
     pub const fn seed(&self) -> Option<u64> {
         self.seed
     }
+
+    pub const fn aim(&self) -> &CursorAim {
+        &self.aim
+    }
 }
 
 impl Default for CursorMotionProfile {
@@ -135,6 +147,7 @@ impl Default for CursorMotionProfile {
             tremor: DEFAULT_TREMOR,
             dwell_ms: 0,
             seed: None,
+            aim: CursorAim::default(),
         }
     }
 }
