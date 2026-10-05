@@ -131,7 +131,13 @@ pub fn execute(
         drop_delay_ms: args.drop_delay_ms,
     };
     params.validate(deadline)?;
-    crate::cursor_overlay::submit_travel(adapter, context, from.point.clone(), &lease, false);
+    crate::cursor_overlay::submit_travel(
+        adapter,
+        context,
+        from.point.clone(),
+        &lease,
+        crate::CursorShape::Arrow,
+    );
     let drag_tracking = crate::cursor_overlay::submit_drag(
         adapter,
         context,

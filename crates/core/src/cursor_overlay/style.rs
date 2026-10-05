@@ -1,4 +1,4 @@
-use super::{CursorImage, CursorImages};
+use super::{CursorImage, CursorImages, CursorShape};
 use crate::{AdapterError, ErrorCode};
 use serde::{Deserialize, Serialize};
 
@@ -80,12 +80,29 @@ impl CursorOverlayStyle {
         self.images.set_pointer(image);
     }
 
+    pub fn set_text_image(&mut self, image: Option<CursorImage>) {
+        self.images.set_text(image);
+    }
+
     pub const fn image(&self) -> Option<&CursorImage> {
         self.images.arrow()
     }
 
     pub const fn pointer_image(&self) -> Option<&CursorImage> {
         self.images.pointer()
+    }
+
+    pub const fn text_image(&self) -> Option<&CursorImage> {
+        self.images.text()
+    }
+
+    /// Whether an image is configured for `shape`; the arrow always has one, built in or not.
+    pub const fn draws(&self, shape: CursorShape) -> bool {
+        match shape {
+            CursorShape::Arrow => true,
+            CursorShape::Pointer => self.images.pointer().is_some(),
+            CursorShape::Text => self.images.text().is_some(),
+        }
     }
 
     pub const fn images(&self) -> &CursorImages {

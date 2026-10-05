@@ -169,8 +169,8 @@ fn enabled_cursor_moves_before_dispatch_then_clicks_after_it() {
     );
     assert!(travel.target().is_none());
     assert!(
-        !travel.is_pointer(),
-        "clicking into a text field keeps the arrow"
+        travel.shape().is_arrow(),
+        "without a text image, clicking into a text field keeps the arrow"
     );
     assert_eq!(click.destination(), &center);
     assert!(

@@ -142,14 +142,18 @@ fn multi_agent_session_cancel_drag_routes_to_the_per_agent_socket() {
 
 fn context_with_pointer_image() -> CommandContext {
     let mut style = CursorOverlayStyle::default();
-    let hand = std::env::temp_dir().join("hand.png");
-    style.set_pointer_image(Some(
+    let image = |name: &str| {
         crate::CursorImage::new(
-            hand.to_string_lossy().into_owned(),
+            std::env::temp_dir()
+                .join(name)
+                .to_string_lossy()
+                .into_owned(),
             Point { x: 8.0, y: 0.0 },
         )
-        .expect("valid pointer image"),
-    ));
+        .expect("valid cursor image")
+    };
+    style.set_pointer_image(Some(image("hand.png")));
+    style.set_text_image(Some(image("caret.png")));
     let config = CursorOverlayConfig::enabled(None, 6)
         .and_then(|config| config.with_style(style))
         .expect("valid config");
@@ -157,7 +161,7 @@ fn context_with_pointer_image() -> CommandContext {
 }
 
 #[test]
-fn without_a_pointer_image_travel_never_carries_the_pointer_flag() {
+fn without_shape_images_travel_never_carries_a_shape() {
     let adapter = RoutingCaptureAdapter::new();
     dispatch_mouse_event_with_cursor(
         &adapter,
@@ -171,8 +175,8 @@ fn without_a_pointer_image_travel_never_carries_the_pointer_flag() {
     assert!(
         presented
             .iter()
-            .all(|control| !serde_json::to_string(control).unwrap().contains("pointer")),
-        "controls must stay readable by renderers that predate pointer images"
+            .all(|control| !serde_json::to_string(control).unwrap().contains("shape")),
+        "controls must stay readable by renderers that predate cursor shapes"
     );
 }
 
@@ -191,7 +195,7 @@ fn a_control_whose_style_is_out_of_range_fails_its_own_validation() {
 
 #[test]
 fn a_coordinate_click_arrives_as_the_pointer_and_a_move_as_the_arrow() {
-    for (click, pointer) in [(true, true), (false, false)] {
+    for (click, shape) in [(true, CursorShape::Pointer), (false, CursorShape::Arrow)] {
         let adapter = RoutingCaptureAdapter::new();
         dispatch_mouse_event_with_cursor(
             &adapter,
@@ -204,24 +208,28 @@ fn a_coordinate_click_arrives_as_the_pointer_and_a_move_as_the_arrow() {
         let presented = adapter.presented.lock().unwrap();
         let travel = presented[0].instruction().expect("travel instruction");
         assert_eq!(travel.phase(), CursorPhase::Travel);
-        assert_eq!(travel.is_pointer(), pointer, "click {click}");
+        assert_eq!(travel.shape(), shape, "click {click}");
         assert!(
             presented[1..]
                 .iter()
-                .all(|control| !control.instruction().is_some_and(|i| i.is_pointer())),
-            "only the travel decides the image"
+                .all(|control| control.instruction().is_none_or(|i| i.shape().is_arrow())),
+            "only the travel carries a shape"
         );
     }
 }
 
 #[test]
-fn the_pointer_flag_is_omitted_from_json_unless_set() {
+fn the_shape_is_omitted_from_json_for_the_arrow() {
     let config = CursorOverlayConfig::enabled(None, 6).expect("valid config");
     let arrow = CursorOverlayInstruction::new(Point { x: 1.0, y: 2.0 }, &config, false).unwrap();
-    assert!(!serde_json::to_string(&arrow).unwrap().contains("pointer"));
-    let pointer = arrow.with_pointer(true);
-    let json = serde_json::to_string(&pointer).unwrap();
-    assert!(json.contains(r#""pointer":true"#));
-    let parsed: CursorOverlayInstruction = serde_json::from_str(&json).unwrap();
-    assert!(parsed.is_pointer());
+    assert!(!serde_json::to_string(&arrow).unwrap().contains("shape"));
+    for (shape, wire) in [
+        (CursorShape::Pointer, r#""shape":"pointer""#),
+        (CursorShape::Text, r#""shape":"text""#),
+    ] {
+        let json = serde_json::to_string(&arrow.clone().with_shape(shape)).unwrap();
+        assert!(json.contains(wire), "{json}");
+        let parsed: CursorOverlayInstruction = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.shape(), shape);
+    }
 }

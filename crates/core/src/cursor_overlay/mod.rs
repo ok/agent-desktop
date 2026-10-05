@@ -10,6 +10,7 @@ mod motion_profile;
 mod path_shape;
 mod phase;
 mod pose;
+mod shape;
 mod style;
 mod submit;
 mod timing;
@@ -26,6 +27,7 @@ pub use motion::CursorMotion;
 pub use motion_profile::CursorMotionProfile;
 pub use phase::CursorPhase;
 pub use pose::CursorPose;
+pub use shape::CursorShape;
 pub use style::CursorOverlayStyle;
 pub(crate) use submit::{
     cancel_drag, confirms_delivery, dispatch_mouse_event_with_cursor, input_was_delivered, submit,

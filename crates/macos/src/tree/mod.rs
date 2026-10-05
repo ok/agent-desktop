@@ -9,6 +9,7 @@ pub(crate) mod bounded_string;
 pub(crate) mod build_context;
 pub(crate) mod capabilities;
 pub(crate) mod child_labels;
+pub(crate) mod cursor_shape;
 pub(crate) mod element;
 pub(crate) mod element_bounds;
 pub(crate) mod element_dedupe;

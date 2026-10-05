@@ -11,6 +11,7 @@ use std::thread;
 use std::time::Duration;
 
 use super::bridge;
+use super::settle::{self, ShapeSettle};
 
 pub(super) const MARKER: &str = "AGENT_DESKTOP_CURSOR_OVERLAY_CHILD";
 pub(super) const SOCKET_ENV: &str = "AGENT_DESKTOP_CURSOR_OVERLAY_SOCKET";
@@ -24,6 +25,7 @@ struct OverlayState {
     moves: u64,
     at: Option<Point>,
     resting: bool,
+    settle: ShapeSettle,
 }
 
 pub(crate) fn entry_from_env() -> Option<Result<(), AdapterError>> {
@@ -104,12 +106,14 @@ fn run() -> Result<(), AdapterError> {
             }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                 bridge::idle();
+                settle_shape(&mut state);
                 if !state.resting
                     && !bridge::drag_active()
                     && quiet_since.elapsed().as_millis() >= u128::from(CURSOR_IDLE_REST_MS)
                 {
                     bridge::rest();
                     state.resting = true;
+                    state.settle.cancel();
                 }
                 thread::sleep(Duration::from_millis(8));
             }
@@ -140,6 +144,7 @@ fn handle(control: &CursorOverlayControl, state: &mut OverlayState) -> Result<bo
     }
     if control.is_hide() {
         bridge::hide();
+        state.settle.cancel();
         apply_landing_memory(control, state, None);
         return Ok(true);
     }
@@ -159,7 +164,21 @@ fn handle(control: &CursorOverlayControl, state: &mut OverlayState) -> Result<bo
     render(instruction, state)?;
     apply_landing_memory(control, state, Some(instruction));
     advance_moves(control, state);
+    if instruction.phase() == CursorPhase::Drag || !settle::has_shapes(&state.style) {
+        state.settle.cancel();
+    } else {
+        state.settle.schedule(std::time::Instant::now());
+    }
     Ok(true)
+}
+
+fn settle_shape(state: &mut OverlayState) {
+    if state.settle.due(std::time::Instant::now())
+        && !bridge::drag_active()
+        && let Some(at) = &state.at
+    {
+        settle::apply(at);
+    }
 }
 
 fn absorb_settings(control: &CursorOverlayControl, state: &mut OverlayState) -> Option<bool> {

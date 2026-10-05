@@ -1,16 +1,17 @@
 use agent_desktop_core::{
     AdapterError, CURSOR_HIGHLIGHT_HOLD_MS, CursorImage, CursorOverlayInstruction,
-    CursorOverlayStyle, CursorPhase, CursorPose, ErrorCode, Point, Rect,
+    CursorOverlayStyle, CursorPhase, CursorPose, CursorShape, ErrorCode, Point, Rect,
 };
 use std::ffi::{CString, c_char};
 
 const REDUCE_MOTION: u8 = 1 << 2;
 const HIGHLIGHT: u8 = 1 << 3;
-const POINT_ON_ARRIVAL: u8 = 1 << 4;
-const ARROW_ON_DEPARTURE: u8 = 1 << 5;
-const ARROW_AFTER_EFFECT: u8 = 1 << 6;
+const SHAPE_SHIFT: u8 = 4;
+const SHAPE_ON_ARRIVAL: u8 = 3 << SHAPE_SHIFT;
+const ARROW_ON_DEPARTURE: u8 = 1 << 6;
 const ARROW_SLOT: u8 = 0;
 const POINTER_SLOT: u8 = 1;
+const TEXT_SLOT: u8 = 2;
 
 #[repr(C)]
 struct NativeCursorStyle {
@@ -56,6 +57,7 @@ unsafe extern "C" {
         hotspot_x: f64,
         hotspot_y: f64,
     ) -> bool;
+    fn agent_desktop_cursor_overlay_shape(slot: u8);
     fn agent_desktop_cursor_overlay_idle();
     fn agent_desktop_cursor_overlay_hide();
     fn agent_desktop_cursor_overlay_rest();
@@ -172,15 +174,30 @@ pub(super) fn apply_style(style: &CursorOverlayStyle, image_changed: bool) {
     if image_changed {
         apply_image(ARROW_SLOT, style.image());
         apply_image(POINTER_SLOT, style.pointer_image());
+        apply_image(TEXT_SLOT, style.text_image());
+    }
+}
+
+/// Shows the image for `shape`; a shape without an image draws the arrow.
+pub(super) fn select_shape(shape: CursorShape) {
+    unsafe { agent_desktop_cursor_overlay_shape(slot(shape)) }
+}
+
+const fn slot(shape: CursorShape) -> u8 {
+    match shape {
+        CursorShape::Arrow => ARROW_SLOT,
+        CursorShape::Pointer => POINTER_SLOT,
+        CursorShape::Text => TEXT_SLOT,
     }
 }
 
 fn pointer_flags(instruction: &CursorOverlayInstruction) -> u8 {
     match instruction.phase() {
-        CursorPhase::Effect => ARROW_AFTER_EFFECT,
+        CursorPhase::Effect => 0,
         CursorPhase::Drag => ARROW_ON_DEPARTURE,
-        CursorPhase::Travel if instruction.is_pointer() => ARROW_ON_DEPARTURE | POINT_ON_ARRIVAL,
-        CursorPhase::Travel => ARROW_ON_DEPARTURE,
+        CursorPhase::Travel => {
+            ARROW_ON_DEPARTURE | (slot(instruction.shape()) << SHAPE_SHIFT & SHAPE_ON_ARRIVAL)
+        }
     }
 }
 

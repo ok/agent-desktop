@@ -28,5 +28,4 @@ void ADTrailFinish(double seconds);
 void ADTrailStop(void);
 void ADShowBubble(NSTextField *text, NSRect frame, bool changed);
 void ADPointerImageApply(NSWindow *window, CALayer *pointer);
-void ADPointerImageSelect(NSWindow *window, CALayer *pointer, bool pointing);
-void ADPointerImageRelease(NSWindow *window, CALayer *pointer, double seconds);
+void ADPointerImageSelect(NSWindow *window, CALayer *pointer, uint8_t slot);

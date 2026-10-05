@@ -22,10 +22,9 @@ typedef struct {
 
 static const uint8_t ADReduceMotion = 1 << 2;
 static const uint8_t ADHighlightCue = 1 << 3;
-static const uint8_t ADPointOnArrival = 1 << 4;
-static const uint8_t ADArrowOnDeparture = 1 << 5;
-static const uint8_t ADArrowAfterEffect = 1 << 6;
-static const double ADPointerReleaseSeconds = 0.35;
+static const uint8_t ADShapeOnArrival = 3 << 4;
+static const uint8_t ADShapeShift = 4;
+static const uint8_t ADArrowOnDeparture = 1 << 6;
 static const CGFloat ADStage = 240.0;
 static const CGFloat ADBoxWidth = 32.0;
 static const CGFloat ADBoxHeight = 40.0;
@@ -269,6 +268,12 @@ bool agent_desktop_cursor_overlay_drag_active(void) {
     return ADDragArmed;
 }
 
+void agent_desktop_cursor_overlay_shape(uint8_t slot) {
+    if (ADCursorWindow != nil && ADPointer != nil) {
+        ADPointerImageSelect(ADCursorWindow, ADPointer, slot);
+    }
+}
+
 void agent_desktop_cursor_overlay_show(void) {
     [ADCursorWindow orderFrontRegardless];
     if (ADBubbleText.stringValue.length > 0) {
@@ -309,10 +314,10 @@ bool agent_desktop_cursor_overlay_run(const AgentDesktopCursorFrame *frames,
             }
             ADTintPointer();
             if ((config->flags & ADArrowOnDeparture) != 0) {
-                ADPointerImageSelect(ADCursorWindow, ADPointer, false);
+                ADPointerImageSelect(ADCursorWindow, ADPointer, 0);
             }
             ADPointerImageApply(ADCursorWindow, ADPointer);
-            bool pointsOnArrival = (config->flags & ADPointOnArrival) != 0;
+            uint8_t arrivalSlot = (config->flags & ADShapeOnArrival) >> ADShapeShift;
             [ADCursorWindow orderFrontRegardless];
 
             bool showsBubble = config->label != NULL && config->label[0] != '\0';
@@ -339,9 +344,9 @@ bool agent_desktop_cursor_overlay_run(const AgentDesktopCursorFrame *frames,
 
             for (size_t index = 0; index < movementFrameCount; index += 1) {
                 ADMoveCursor(&frames[index], mainHeight);
-                if (pointsOnArrival && frames[index].x == last->x && frames[index].y == last->y) {
-                    ADPointerImageSelect(ADCursorWindow, ADPointer, true);
-                    pointsOnArrival = false;
+                if (arrivalSlot != 0 && frames[index].x == last->x && frames[index].y == last->y) {
+                    ADPointerImageSelect(ADCursorWindow, ADPointer, arrivalSlot);
+                    arrivalSlot = 0;
                 }
                 if (followsBubble) {
                     [ADBubbleWindow setFrameOrigin:NSMakePoint(
@@ -368,9 +373,6 @@ bool agent_desktop_cursor_overlay_run(const AgentDesktopCursorFrame *frames,
                 ADShowBubble(ADBubbleText, bubbleFrame, changedLabel && !reduceMotion);
             } else {
                 [ADBubbleWindow orderOut:nil];
-            }
-            if ((config->flags & ADArrowAfterEffect) != 0) {
-                ADPointerImageRelease(ADCursorWindow, ADPointer, ADPointerReleaseSeconds);
             }
             return true;
         }

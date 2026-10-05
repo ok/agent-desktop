@@ -220,7 +220,10 @@ fn worst_case_image_present_fits_the_renderer_transport_limit() {
     style.set_image(Some(
         CursorImage::new(path.clone(), hotspot.clone()).unwrap(),
     ));
-    style.set_pointer_image(Some(CursorImage::new(path, hotspot).unwrap()));
+    style.set_pointer_image(Some(
+        CursorImage::new(path.clone(), hotspot.clone()).unwrap(),
+    ));
+    style.set_text_image(Some(CursorImage::new(path, hotspot).unwrap()));
     let label = "\"".repeat(256);
     let config = CursorOverlayConfig::enabled(Some(label), 12).unwrap();
     let far = -12_345.678_9;
@@ -233,7 +236,7 @@ fn worst_case_image_present_fits_the_renderer_transport_limit() {
             width: 98_765.432_1,
             height: 98_765.432_1,
         }))
-        .with_pointer(true);
+        .with_shape(CursorShape::Pointer);
     let control = CursorOverlayControl::present_with_style("s".repeat(64), instruction, style)
         .with_motion({
             let mut motion = CursorMotionProfile::default();

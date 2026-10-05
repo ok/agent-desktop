@@ -19,16 +19,15 @@ pub(crate) fn travel_scope(
     ))))
 }
 
-/// Moves the drawn cursor to `destination` before an action; `pointer` arrives showing the
-/// pointer image because the action lands on a pressable control. The flag is sent only
-/// when a pointer image is configured, so controls without one stay byte-identical to what
-/// earlier renderers accept.
+/// Moves the drawn cursor to `destination` before an action, arriving as `shape`. A shape is
+/// sent only when an image is configured for it, so controls without one stay byte-identical
+/// to what earlier renderers accept.
 pub(crate) fn submit_travel(
     adapter: &dyn PlatformAdapter,
     context: &CommandContext,
     destination: Point,
     lease: &crate::InteractionLease,
-    pointer: bool,
+    shape: super::CursorShape,
 ) {
     let Some(_scope) = travel_scope(lease) else {
         return;
@@ -36,9 +35,11 @@ pub(crate) fn submit_travel(
     let instruction =
         super::CursorOverlayInstruction::new(destination, context.cursor_overlay(), false).map(
             |instruction| {
-                instruction.with_pointer(
-                    pointer && context.cursor_overlay().style().pointer_image().is_some(),
-                )
+                if context.cursor_overlay().style().draws(shape) {
+                    instruction.with_shape(shape)
+                } else {
+                    instruction
+                }
             },
         );
     let _ = send(adapter, context, instruction);
@@ -182,7 +183,12 @@ pub(crate) fn dispatch_mouse_event_with_cursor(
     lease: &crate::InteractionLease,
 ) -> Result<(), AdapterError> {
     let point = event.point.clone();
-    crate::cursor_overlay::submit_travel(adapter, context, point.clone(), lease, click);
+    let shape = if click {
+        crate::CursorShape::Pointer
+    } else {
+        crate::CursorShape::Arrow
+    };
+    crate::cursor_overlay::submit_travel(adapter, context, point.clone(), lease, shape);
     let result = adapter.mouse_event(event, lease);
     if crate::cursor_overlay::input_was_delivered(&result) {
         crate::cursor_overlay::submit(

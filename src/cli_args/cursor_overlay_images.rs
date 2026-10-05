@@ -32,6 +32,20 @@ pub(crate) struct CursorOverlayImagesArgs {
         help = "Click point in the pointer image, in image points from its top-left (default 0,0)"
     )]
     pub pointer_hotspot: Option<(f64, f64)>,
+    #[arg(
+        long,
+        value_name = "PATH",
+        help = "PNG shown instead while the cursor rests on a text field or other control that takes typed text"
+    )]
+    pub text_image: Option<PathBuf>,
+    #[arg(
+        long,
+        value_name = "X,Y",
+        requires = "text_image",
+        value_parser = parse_hotspot,
+        help = "Click point in the text image, in image points from its top-left (default 0,0)"
+    )]
+    pub text_hotspot: Option<(f64, f64)>,
 }
 
 impl CursorOverlayImagesArgs {
@@ -41,6 +55,7 @@ impl CursorOverlayImagesArgs {
             self.pointer_image.as_deref(),
             self.pointer_hotspot,
         )?);
+        style.set_text_image(cursor_image(self.text_image.as_deref(), self.text_hotspot)?);
         Ok(())
     }
 }
