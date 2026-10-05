@@ -196,6 +196,9 @@ On macOS:
 
 - `--travel-ms MIN,MAX` needs `30 ≤ MIN ≤ MAX`. Travel max plus `--dwell-ms` must be at most 700 ms, or the command returns `INVALID_ARGS`.
 - Reduce Motion skips travel and dwell. Physical headed drags keep their own motion.
+- `--aim-spread N` (0 to 1, default 0) varies where a ref action's cursor lands inside its control: a point in the central part of that fraction of the control's size, weighted towards the middle and different on every move. A cursor already resting in that part clicks where it is.
+- `--drift-off` moves the cursor off a clicked control 0.4 to 0.9 s after the click, unless the next action arrives first.
+- Both affect the drawn cursor only. A physical click always lands on its verified point. Both draw from `--motion-seed` when set.
 
 On macOS and Windows:
 

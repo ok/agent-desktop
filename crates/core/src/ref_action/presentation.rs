@@ -25,8 +25,17 @@ pub(super) fn before_dispatch(
         return;
     }
     TRAVELLED_BEFORE_LEASE.set(None);
-    let shape = arrival_shape(&target.entry.identity.role, action);
-    crate::cursor_overlay::submit_travel(target.adapter, target.context, destination, lease, shape);
+    let arrival = crate::cursor_overlay::Arrival {
+        shape: arrival_shape(&target.entry.identity.role, action),
+        bounds: aim_bounds(preflight),
+    };
+    crate::cursor_overlay::submit_travel(
+        target.adapter,
+        target.context,
+        destination,
+        lease,
+        arrival,
+    );
 }
 
 /// Starts the drawn cursor's travel toward the target before the interaction
@@ -47,16 +56,19 @@ pub(super) fn before_lease(
     {
         return;
     }
-    let Some(destination) = target_center(context, deadline) else {
+    let Some((destination, bounds)) = target_center(context, deadline) else {
         return;
     };
-    let shape = arrival_shape(&context.entry.identity.role, &request.action);
+    let arrival = crate::cursor_overlay::Arrival {
+        shape: arrival_shape(&context.entry.identity.role, &request.action),
+        bounds: Some(bounds),
+    };
     if crate::cursor_overlay::submit_travel_before_lease(
         context.adapter,
         context.context,
         destination.clone(),
         deadline,
-        shape,
+        arrival,
     ) {
         TRAVELLED_BEFORE_LEASE.set(Some((destination.x, destination.y)));
     }
@@ -65,7 +77,7 @@ pub(super) fn before_lease(
 fn target_center(
     context: super::ref_action_wait_context::RefActionWaitContext<'_>,
     deadline: crate::Deadline,
-) -> Option<crate::Point> {
+) -> Option<(crate::Point, crate::Rect)> {
     let geometry = &context.entry.geometry;
     let stored = matches!(
         geometry.bounds_space,
@@ -73,7 +85,7 @@ fn target_center(
     )
     .then_some(geometry.bounds.as_ref())
     .flatten()
-    .and_then(center_of);
+    .and_then(centered);
     stored.or_else(|| {
         let handle = crate::refs::resolve_saved_ref::land_saved_ref(
             context.adapter,
@@ -86,7 +98,7 @@ fn target_center(
             .get_element_bounds(&handle, deadline)
             .ok()
             .flatten()?;
-        center_of(&bounds)
+        centered(&bounds)
     })
 }
 
@@ -118,6 +130,10 @@ pub(super) fn effect_ripples(target: &ResolvedRefAction<'_>, action: &Action) ->
             crate::tree::state::has_state(&state.states, crate::tree::state::FOCUSED)
         });
     !focused
+}
+
+fn centered(bounds: &crate::Rect) -> Option<(crate::Point, crate::Rect)> {
+    center_of(bounds).map(|center| (center, *bounds))
 }
 
 fn center_of(bounds: &crate::Rect) -> Option<crate::Point> {
@@ -211,6 +227,15 @@ pub(crate) fn move_caret(
     handle: &crate::NativeHandle,
 ) {
     place_caret(adapter, context, handle);
+}
+
+/// The control's bounds, inside which the renderer may vary the landing point. Physical
+/// delivery clicks its verified point, so the drawn cursor must land exactly there.
+fn aim_bounds(preflight: &ActionabilityPreflight) -> Option<crate::Rect> {
+    match preflight.pointer_delivery {
+        crate::actionability::PointerDelivery::Physical => None,
+        _ => preflight.presentation_bounds,
+    }
 }
 
 fn destination(preflight: &ActionabilityPreflight) -> Option<crate::Point> {

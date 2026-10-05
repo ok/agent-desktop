@@ -230,3 +230,20 @@ fn the_shape_is_omitted_from_json_for_the_arrow() {
         assert_eq!(parsed.shape(), shape);
     }
 }
+
+#[test]
+fn the_landing_bounds_are_omitted_from_json_unless_set() {
+    let config = CursorOverlayConfig::enabled(None, 6).expect("valid config");
+    let travel = CursorOverlayInstruction::new(Point { x: 1.0, y: 2.0 }, &config, false).unwrap();
+    assert!(!serde_json::to_string(&travel).unwrap().contains("landing"));
+    let bounds = crate::Rect {
+        x: 0.0,
+        y: 0.0,
+        width: 4.0,
+        height: 4.0,
+    };
+    let json = serde_json::to_string(&travel.with_landing(Some(bounds))).unwrap();
+    let parsed: CursorOverlayInstruction = serde_json::from_str(&json).unwrap();
+    assert_eq!(parsed.landing(), Some(&bounds));
+    assert_eq!(parsed.target(), None);
+}

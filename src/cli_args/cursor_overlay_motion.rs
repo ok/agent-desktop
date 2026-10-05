@@ -39,6 +39,17 @@ pub(crate) struct CursorOverlayMotionArgs {
         help = "Vary each move deterministically from this seed"
     )]
     pub motion_seed: Option<u64>,
+    #[arg(
+        long,
+        value_name = "N",
+        help = "Land up to this fraction of a control's half-size away from its centre, 0 (centre) to 1 (default 0)"
+    )]
+    pub aim_spread: Option<f64>,
+    #[arg(
+        long,
+        help = "After a click, move the cursor off the control to a nearby spot unless another action follows"
+    )]
+    pub drift_off: bool,
 }
 
 impl CursorOverlayMotionArgs {
@@ -60,6 +71,10 @@ impl CursorOverlayMotionArgs {
             motion.set_dwell_ms(dwell_ms);
         }
         motion.set_seed(self.motion_seed);
+        let mut aim = agent_desktop_core::CursorAim::default();
+        aim.set_spread(self.aim_spread.unwrap_or(0.0));
+        aim.set_drift(self.drift_off);
+        motion.set_aim(aim);
         motion
     }
 }

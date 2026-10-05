@@ -1,4 +1,6 @@
+use super::render::frames_for;
 use super::*;
+use agent_desktop_core::{CursorMotion, CursorPose};
 
 fn screen() -> agent_desktop_core::Rect {
     agent_desktop_core::Rect {

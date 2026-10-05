@@ -17,6 +17,8 @@ pub struct CursorOverlayInstruction {
     phase: CursorPhase,
     #[serde(default, skip_serializing_if = "CursorShape::is_arrow")]
     shape: CursorShape,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    landing: Option<Rect>,
 }
 
 impl CursorOverlayInstruction {
@@ -40,6 +42,7 @@ impl CursorOverlayInstruction {
             target: None,
             phase: CursorPhase::Travel,
             shape: CursorShape::Arrow,
+            landing: None,
         })
     }
 
@@ -56,6 +59,23 @@ impl CursorOverlayInstruction {
 
     pub const fn shape(&self) -> CursorShape {
         self.shape
+    }
+
+    /// Lands on `destination` instead, e.g. a point the renderer chose inside the target.
+    pub fn with_destination(mut self, destination: Point) -> Self {
+        self.destination = destination;
+        self
+    }
+
+    /// The bounds of the control a travel ends on, inside which the renderer may choose its
+    /// own landing point. Unlike `target`, they are never drawn.
+    pub fn with_landing(mut self, landing: Option<Rect>) -> Self {
+        self.landing = landing;
+        self
+    }
+
+    pub const fn landing(&self) -> Option<&Rect> {
+        self.landing.as_ref()
     }
 
     pub fn with_drag_from(mut self, drag_from: Option<Point>) -> Self {

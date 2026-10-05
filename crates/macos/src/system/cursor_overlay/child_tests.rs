@@ -1,4 +1,6 @@
+use super::render::motion_frames;
 use super::*;
+use agent_desktop_core::CursorPose;
 use std::thread;
 
 #[test]

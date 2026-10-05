@@ -26,6 +26,9 @@ fn motion_flags_build_the_core_profile() {
         "100",
         "--motion-seed",
         "7",
+        "--aim-spread",
+        "0.5",
+        "--drift-off",
     ])
     .unwrap();
     let config = harness.enable.to_core().unwrap();
@@ -36,6 +39,21 @@ fn motion_flags_build_the_core_profile() {
     assert_eq!(motion.tremor(), 2.0);
     assert_eq!(motion.dwell_ms(), 100);
     assert_eq!(motion.seed(), Some(7));
+    assert_eq!(motion.aim().spread(), 0.5);
+    assert!(motion.aim().drift());
+}
+
+#[test]
+fn aim_spread_outside_zero_to_one_is_rejected() {
+    for value in ["-0.1", "1.5", "NaN"] {
+        let error = parse(&["--aim-spread", value])
+            .ok()
+            .map(|harness| harness.enable.to_core());
+        assert!(
+            matches!(error, None | Some(Err(_))),
+            "--aim-spread {value} must be rejected"
+        );
+    }
 }
 
 #[test]
